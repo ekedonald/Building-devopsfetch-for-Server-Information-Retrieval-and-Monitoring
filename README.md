@@ -23,7 +23,7 @@
    - Provides usage examples for each command-line flag (`-h` or `--help`).
 
 ## Implementing The `devopsfetch` Tool
-The approach to implementing the [devopsfetch](devopsfetch) tool was divided 3 main functions which will be discussed as follows:
+The [devopsfetch](devopsfetch) tool was created using a Bash Script. It was designed to provide a convenient way of retrieving, displaying system information related to networking, Docker, Nginx, users and system activity logs. The script is divided divided 3 main functions which will be discussed below:
 
 ### 1. Essential Functions
 
@@ -35,22 +35,22 @@ The approach to implementing the [devopsfetch](devopsfetch) tool was divided 3 m
 
 ### 2. Core Functionality Functions
 
-**`display_ports()`**: This displays information about all the active network ports.
+**`display_ports()`**: This displays information about all the active network ports using `ss`, `lsof` and `awk` commands.
 - If no argument is passed alongside `-p`, it list all the active ports, their corresponding user and associated services.
 
 - If an argument is passed alongside `-p`, it provides detailed information about a specific port.
 
-**`display_docker()`**: This displays information about all the Docker images and containers.
+**`display_docker()`**: This displays information about all the Docker images and containers using `docker images`, `docker ps` and `docker info`.
 - If no argument is passed alongside `-d`, it lists all Docker images and containers.
 
 - If a `container_name` is passed alongside `-d`, it provides detailed information (_i.e. Name, Image, State, IP, Ports, User and Services_) about the specified container.
 
-**`display_nginx()`**: It retrieves information about Nginx domains and configuration.
+**`display_nginx()`**: It retrieves information about Nginx domains and configuration in the `/etc/nginx/sites-enabled` and `/etc/nginx/conf.d` directories.
 - If no argument is passed alongside `-n`, it lists all Nginx domains and their ports.
 
 - If a `domain name` is passed alongside `-n`, it displays the Domain, Port and URL it is proxying to.
 
-**`display_users()`**: It provides information about system users.
+**`display_users()`**: It provides information about system users using `id`, `last` and `w` commands.
 - If no argument is passed alongside `-u`, it list all users with their last login time.
 
 - If a `user_name` is passed alongside `-u`, detailed information about the specified user is displayed (_i.e. current login status, last login time and resource usage details_).
@@ -80,3 +80,4 @@ The `case` statement is used to handle user input. It identifies the chosen opti
 - `devopsfetch -t 2024-07-22`: Displays system activity logs for July 22nd, 2024.
 
 - `devopsfetch -t 2024-07-18 2024-07-23`: Displays system activity logs for July 18th, 2024 to July 23rd, 2024.
+
