@@ -81,3 +81,148 @@ The `case` statement is used to handle user input. It identifies the chosen opti
 
 - `devopsfetch -t 2024-07-18 2024-07-23`: Displays system activity logs for July 18th, 2024 to July 23rd, 2024.
 
+
+## Installing and Configuring `devopsfetch` as an Executable and Monitoring Service
+
+The [install_devopsfetch.sh](./install_devopsfetch.sh) script installs and configures [devopsfetch](./devopsfetch) as an Executable and Service. Here's a breakdown of the script:
+
+### 1. Root Privileges
+**`if [ "$EUID" -ne 0 ]`**: The script checks if the user has root privileges. If not, it exits with an error message.
+
+### 2. Installing Dependencies
+**`apt-get update`**: Updates the package lists to get the latest information about available packages.
+
+**`apt-get install -y jq`**: Installs the jq command-line JSON processor, which is used by the **devopsfetch** script to process data.
+
+### 3. Copy and Configure devopsfetch Script
+**`cp devopsfetch /usr/local/bin/devopsfetch`**: Copies the main devopsfetch script from the current directory to `/usr/local/bin`. This makes it an **Executable**.
+
+**`chmod +x /usr/local/bin/devopsfetch`**: Sets executable permission for devopsfetch.
+
+### 4. Set Up Log File
+
+**`touch /var/log/devopsfetch.log`**: Creates a log file for the service in /var/log.
+
+**`chmod 666 /var/log/devopsfetch.log`**: Sets permissions to allow all users to read and write to the log file.
+
+### 5. Create a Systemd Service Unit File
+This file creates a service named `devopsfetch.service` in the systemd service directory.
+
+```sh
+[Unit]
+Description=DevOpsFetch Monitoring Service
+After=network.target
+
+[Service]
+ExecStart=/bin/bash -c '/usr/local/bin/devopsfetch -t "$(date -d \"5 minutes ago\" +\"%Y-%m-%d %H:%M:%S\")" "$(date +\"%Y-%m-%d %H:%M:%S\")"'
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target
+```
+
+### 6. Create Systemd Timer File
+This file defines the schedule for running the service. The timer runs 5 minutes after system boot and it runs every 5 minutes after it becomes active.
+
+```sh
+[Unit]
+Description=Run DevOpsFetch every 5 minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+### 7. Enable and Start the Service and Timer
+The commands below reload the **systemd daemon** so the new service and timer will reflect, enables the `devopsfetch.service` and `devopsfetch.timer` to start automatically on system boot.
+
+```sh
+systemctl daemon-reload
+systemctl enable devopsfetch.service
+systemctl enable devopsfetch.timer
+systemctl start devopsfetch.timer
+```
+
+### 8. Configure Log Rotation
+This create a file named `devopsfetch` in the `lograte` configuration directory. This file defines how the log file is rotate.
+
+The content of the file:
+- **`hourly`**: Specifies that the log file should be rotated hourly.
+
+- **`rotate 288`**: Specifies that 288 rotated log files should be kept.
+
+- **`compress`**: Specifies that the rotated logs should be compressed (zipped). 
+
+- **`missingok`**: Specifies that if the log file is missing, it should not cause an error.
+
+- **`notifempty`**: Specifies that an email notification should be sent if the log file is empty.
+
+- **`create 666 root root`**: Specifies that a new log file should be created with read/write permissions for the root user, groups and others.
+
+```sh
+/var/log/devopsfetch.log {
+    hourly
+    rotate 288
+    compress
+    missingok
+    notifempty
+    create 666 root root
+}
+```
+
+In summary. this script setup a monitoring service called `devopsfetch` that runs every 5 minutes, logs its out to `/var/log/devopsfetch.log`, starts automatically on system boot and rotates its log files hourly to conserve disk space.
+
+## Validating The Scripts & Testing the Functionality `devopsfetch` Service
+
+### Prerequisites
+The full functionality of the `devopsfetch` service can only tested if the 2 packages are installed on your system. 
+- [Docker](https://docs.docker.com/engine/install/ubuntu/)
+- [Nginx](https://ubuntu.com/tutorials/install-and-configure-nginx#2-installing-nginx)
+
+To validate the scripts, run the following commands:
+
+```sh
+sudo chmod +x devopsfetch install_devopsfetch.sh
+sudo ./install_devopsfetch.sh
+```
+
+After running the commands above, run the commands below to test the functionality of the `devopsfetch.service`:
+
+1. List Active Ports.
+
+```sh
+devopsfetch -p
+```
+
+2. List Docker images and containers.
+
+```sh
+devopsfetch -d
+```
+
+_**Note**: I created a container from the official **mariadb** image before running the command above._
+
+3. List all users and last login.
+
+```sh
+devopsfetch -u
+```
+
+4. Display `ikennaed.site` domain and the URL it proxies to.
+
+```sh
+devopsfetch -n ikennaed.site
+```
+
+_**Note**: I configured Nginx to act a Reverse Proxy for a Golang Web App._
+
+5. Display activities on a July 10th, 2024.
+
+```sh
+devopsfetch -t 2024-07-10
+```
