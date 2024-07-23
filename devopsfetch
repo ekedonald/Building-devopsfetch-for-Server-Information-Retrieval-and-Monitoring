@@ -1,0 +1,240 @@
+#!/bin/bash
+
+log_output() {
+    tee -a /var/log/devopsfetch.log
+}
+
+# Function to display help
+display_help() {
+    echo "Usage: devopsfetch [OPTION] [ARGUMENT]"
+    echo "Retrieve and display system information."
+    echo
+    echo "Options:"
+    echo "  -p, --port [PORT]     Display active ports or specific port info"
+    echo "  -d, --docker [NAME]   List Docker images/containers or specific container info"
+    echo "  -n, --nginx [DOMAIN]  Display Nginx domains or specific domain config"
+    echo "  -u, --users [USER]    List users and last login or specific user info"
+    echo "  -t, --time [DATE|START END]  Display activities on a specific date or within a time range (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)"
+    echo "  -h, --help            Display this help message"
+    echo
+    echo "Examples:"
+    echo "  devopsfetch -p"
+    echo "  devopsfetch -p 80"
+    echo "  devopsfetch -d"
+    echo "  devopsfetch -d container_name"
+    echo "  devopsfetch -n"
+    echo "  devopsfetch -n ikennaed.site"
+    echo "  devopsfetch -u"
+    echo "  devopsfetch -u vagrant"
+    echo "  devopsfetch -t '2024-07-03'"
+    echo "  devopsfetch -t '2024-07-03 00:00:00' '2024-07-02 23:59:59'"
+}
+
+# Function to format output as a table
+format_table() {
+    column -t -s $'\t'
+}
+
+# Function to display ports information
+display_ports() {
+    if [ -z "$1" ]; then
+        echo "Active Ports and Services:"
+        echo -e "Port\tUser\tService"
+        sudo ss -tuln | awk 'NR>1 {print $5}' | awk -F: '{print $NF}' | sort -n | uniq | \
+        while read port; do
+            sudo lsof -i :$port | awk 'NR==2 {printf "%s\t%s\t%s\n", "'$port'", $3, $1}'
+        done | format_table
+    else
+        echo "Information for Port $1:"
+        sudo lsof -i :$1 | awk '{print $1,$2,$3,$5,$8}' | sort -k 5| column -t
+    fi
+}
+
+
+# Function to display Docker information
+display_docker() {
+    if ! docker info >/dev/null 2>&1; then
+        echo "Error: Docker is not running or you don't have permission to access it."
+        echo "Try adding your user to the docker group: sudo usermod -aG docker $USER"
+        echo "Then log out and log back in for the changes to take effect."
+        return 1
+    fi
+
+    if [ -z "$1" ]; then
+        echo "Docker Images:"
+        docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.Size}}" | format_table
+        echo
+        echo "Docker Containers:"
+        docker ps -a --format "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}" | format_table
+    else
+        echo "Information for Container $1:"
+        docker inspect $1 | jq '.[0] | {
+            Name: .Name,
+            Image: .Config.Image,
+            State: .State.Status,
+            IP: .NetworkSettings.IPAddress,
+            Ports: .NetworkSettings.Ports,
+            User: .Config.User,
+            Services: .NetworkSettings.Ports | to_entries | map(.key + ": " + (.value[0].HostPort // "N/A")) | join(", ")
+        }'
+    fi
+}
+
+# Function to display Nginx information
+display_nginx() {
+    search_nginx_config() {
+        local domain="$1"
+        local config_files=("/etc/nginx/sites-enabled/*" "/etc/nginx/conf.d/*")
+
+        for config_file_pattern in "${config_files[@]}"; do
+            for config_file in $config_file_pattern; do
+                if [ -r "$config_file" ]; then
+                    if grep -q "server_name $domain" "$config_file"; then
+                        echo "$config_file"
+                        return 0
+                    fi
+                fi
+            done
+        done
+        return 1
+    }
+
+    if [ -z "$1" ]; then
+        echo "Nginx Domains and Ports:"
+        {
+            echo -e "Domain\tPort"
+            for config_file in /etc/nginx/sites-enabled/* /etc/nginx/conf.d/*; do
+                if [ -r "$config_file" ]; then
+                    domain=$(grep -h 'server_name' "$config_file" 2>/dev/null | awk '{print $2}' | sed 's/;//')
+                    port=$(grep -h 'listen' "$config_file" 2>/dev/null | grep -v '#' | awk '{print $2}' | sed 's/;//' | head -n1)
+                    if [ -n "$domain" ]; then
+                        echo -e "$domain\t$port"
+                    fi
+                fi
+            done
+        } | format_table
+    else
+        echo "Configuration for Domain $1:"
+        config_file=$(search_nginx_config "$1")
+        if [ -n "$config_file" ]; then
+            listen_port=$(grep -m 1 'listen' "$config_file" | awk '{print $2}' | sed 's/;//')
+            proxy_pass=$(grep -m 1 'proxy_pass' "$config_file" | awk '{print $2}' | sed 's/;//')
+            printf "Domain\tPort\tProxying To\n%s\t%s\t%s\n" "$1" "$listen_port" "$proxy_pass" | format_table
+        else
+            echo "No configuration found for domain $1"
+        fi
+    fi
+}
+
+# Function to display user information
+display_users() {
+    print_horizontal_line() {
+        printf '+--------------------+---------------------------+\n'
+    }
+
+    print_table_row() {
+        printf "| %-18s | %-25s |\n" "$1" "$2"
+    }
+
+    get_user_info() {
+        local user="$1"
+        local login_time=$(last -n 1 "$user" | awk 'NR==1 {print $4, $5, $6, $7}')
+        
+        if [ -z "$login_time" ]; then
+            login_time="N/A"
+        fi
+        
+        echo -e "$user\t$login_time"
+    }
+
+    if [ -z "$1" ]; then
+        echo "Users and Login Times:"
+        print_horizontal_line
+        print_table_row "Username" "Last Login Time"
+        print_horizontal_line
+        
+        # Get all users with home directories
+        users=$(awk -F: '$6 ~ /^\/home/ {print $1}' /etc/passwd)
+        
+        if [ -z "$users" ]; then
+            print_table_row "No users found" "N/A"
+        else
+            for user in $users; do
+                IFS=$'\t' read -r username login_time <<< "$(get_user_info "$user")"
+                print_table_row "$username" "$login_time"
+            done
+        fi
+        
+        print_horizontal_line
+    else
+        echo "Detailed Information for User $1:"
+        print_horizontal_line
+        
+        if id "$1" &>/dev/null; then
+            w -h "$1" | while read line; do
+                user=$(echo "$line" | awk '{print $1}')
+                login=$(echo "$line" | awk '{print $4}')
+                idle=$(echo "$line" | awk '{print $5}')
+                jcpu=$(echo "$line" | awk '{print $6}')
+                pcpu=$(echo "$line" | awk '{print $7}')
+                what=$(echo "$line" | awk '{print $8, $9, $10, $11}')
+                
+                print_table_row "Username" "$user"
+                print_table_row "Login time" "$login"
+                print_table_row "Idle time" "$idle"
+                print_table_row "JCPU" "$jcpu"
+                print_table_row "PCPU" "$pcpu"
+                print_table_row "Current process" "$what"
+                print_horizontal_line
+            done
+            
+            if [ -z "$(w -h "$1")" ]; then
+                print_table_row "Status" "Not currently logged in"
+                print_horizontal_line
+                last_login=$(last -n 1 "$1" | awk 'NR==1 {print $4, $5, $6, $7}')
+                print_table_row "Last login" "${last_login:-N/A}"
+                print_horizontal_line
+            fi
+        else
+            print_table_row "Error" "User not found"
+            print_horizontal_line
+        fi
+    fi
+}
+
+# Function to display activities within a time range or on a specific date
+display_time_range() {
+    if [[ -z "$2" ]]; then # Check if only one argument was provided
+        echo "Activities on $1:"
+        journalctl --since "$1" --until "$1 23:59:59" | tail -n 50 
+    else
+        echo "Activities between $1 and $2:"
+        journalctl --since "$1" --until "$2" | tail -n 50
+    fi
+}
+
+# Main script logic
+case "$1" in
+    -p|--port)
+        display_ports "$2" | log_output
+        ;;
+    -d|--docker)
+        display_docker "$2" | log_output
+        ;;
+    -n|--nginx)
+        display_nginx "$2" | log_output
+        ;;
+    -u|--users)
+        display_users "$2" | log_output
+        ;;
+    -t|--time)
+        display_time_range "$2" "$3" | log_output
+        ;;
+    -h|--help)
+        display_help | log_output
+        ;;
+    *)
+        echo "Invalid option. Use -h or --help for usage information." | log_output
+        exit 1
+        ;;
+esac
