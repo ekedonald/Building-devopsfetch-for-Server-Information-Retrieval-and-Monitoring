@@ -23,7 +23,7 @@
    - Provides usage examples for each command-line flag (`-h` or `--help`).
 
 ## Implementing The `devopsfetch` Tool
-The approach to implementing the `devopsfetch` was divided 3 sections which will be discussed as follows:
+The approach to implementing the [devopsfetch](devopsfetch) tool was divided 3 main functions which will be discussed as follows:
 
 ### 1. Essential Functions
 
