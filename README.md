@@ -5,21 +5,26 @@
 
 ## Features
 ### Information Retrieval
-1. Ports:
+**1. Ports**:
    - Displays all active ports and services (`-p`or `--port`).
    - Provides detailed information about a specific port (`-p` `<port_number>`).
-2. Docker:
+
+**2. Docker**:
    - Lists all Docker images and containers (`-d` or `--docker`).
    - Provides detailed information about a specific container (`-d` `<container_name>`).
-3. Nginx:
+
+**3. Nginx**:
    - Displays all Nginx domains and their ports (`-n` or `--nginx`).
    - Provides detailed configuration information for a specific domain (`-n` `<domain>`).
-4. Users:
+
+**4. Users**:
    - List all users and their last login times (`-u` or `--users`).
    - Provide detailed information about a specific user (`-u` `<username>`).
-5. Time Range:
+
+**5. Time Range**:
    - Provides detailed information about activities within the specified time range (`-t` `<start_time>` `<end_time>`).
-6. Help:
+   
+**6. Help**:
    - Provides usage examples for each command-line flag (`-h` or `--help`).
 
 ## Implementing The `devopsfetch` Tool
