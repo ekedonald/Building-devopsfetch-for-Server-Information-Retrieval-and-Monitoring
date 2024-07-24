@@ -213,16 +213,16 @@ _**Note**: I created a container from the official **mariadb** image before runn
 devopsfetch -u
 ```
 
-4. Display `ikennaed.site` domain and the URL it proxies to.
+4. Display `ikennade.website` domain and the URL it proxies to.
 
 ```sh
-devopsfetch -n ikennaed.site
+devopsfetch -n ikennade.website
 ```
 
 _**Note**: I configured Nginx to act a Reverse Proxy for a Golang Web App._
 
-5. Display activities on a July 10th, 2024.
+5. Display activities on a July 23rd, 2024.
 
 ```sh
-devopsfetch -t 2024-07-10
+devopsfetch -t 2024-07-23
 ```
