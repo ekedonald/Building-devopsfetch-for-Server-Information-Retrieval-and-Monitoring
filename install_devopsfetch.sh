@@ -6,10 +6,6 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
-# Install dependencies
-apt-get update
-apt-get install -y jq
-
 # Copy main script to /usr/local/bin
 cp devopsfetch /usr/local/bin/devopsfetch
 chmod +x /usr/local/bin/devopsfetch

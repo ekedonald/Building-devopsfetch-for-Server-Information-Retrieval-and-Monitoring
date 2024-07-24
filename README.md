@@ -40,10 +40,10 @@ The [devopsfetch](devopsfetch) tool was created using a Bash Script. It was desi
 
 - If an argument is passed alongside `-p`, it provides detailed information about a specific port.
 
-**`display_docker()`**: This displays information about all the Docker images and containers using `docker images`, `docker ps` and `docker info`.
+**`display_docker()`**: This displays information about all the Docker images and containers using `docker images`, `docker ps` and `docker inspect`.
 - If no argument is passed alongside `-d`, it lists all Docker images and containers.
 
-- If a `container_name` is passed alongside `-d`, it provides detailed information (_i.e. Name, Image, State, IP, Ports, User and Services_) about the specified container.
+- If a `container_name` is passed alongside `-d`, it provides detailed information (_i.e. Container Name, Image, Status, IP Address and Ports_) about the specified container.
 
 **`display_nginx()`**: It retrieves information about Nginx domains and configuration in the `/etc/nginx/sites-enabled` and `/etc/nginx/conf.d` directories.
 - If no argument is passed alongside `-n`, it lists all Nginx domains and their ports.
@@ -89,23 +89,18 @@ The [install_devopsfetch.sh](./install_devopsfetch.sh) script installs and confi
 ### 1. Root Privileges
 **`if [ "$EUID" -ne 0 ]`**: The script checks if the user has root privileges. If not, it exits with an error message.
 
-### 2. Installing Dependencies
-**`apt-get update`**: Updates the package lists to get the latest information about available packages.
-
-**`apt-get install -y jq`**: Installs the jq command-line JSON processor, which is used by the **devopsfetch** script to process data.
-
-### 3. Copy and Configure devopsfetch Script
+### 2. Copy and Configure devopsfetch Script
 **`cp devopsfetch /usr/local/bin/devopsfetch`**: Copies the main devopsfetch script from the current directory to `/usr/local/bin`. This makes it an **Executable**.
 
 **`chmod +x /usr/local/bin/devopsfetch`**: Sets executable permission for devopsfetch.
 
-### 4. Set Up Log File
+### 3. Set Up Log File
 
 **`touch /var/log/devopsfetch.log`**: Creates a log file for the service in /var/log.
 
 **`chmod 666 /var/log/devopsfetch.log`**: Sets permissions to allow all users to read and write to the log file.
 
-### 5. Create a Systemd Service Unit File
+### 4. Create a Systemd Service Unit File
 This file creates a service named `devopsfetch.service` in the systemd service directory.
 
 ```sh
@@ -122,7 +117,7 @@ User=root
 WantedBy=multi-user.target
 ```
 
-### 6. Create Systemd Timer File
+### 5. Create Systemd Timer File
 This file defines the schedule for running the service. The timer runs 5 minutes after system boot and it runs every 5 minutes after it becomes active.
 
 ```sh
@@ -138,7 +133,7 @@ Persistent=true
 WantedBy=timers.target
 ```
 
-### 7. Enable and Start the Service and Timer
+### 6. Enable and Start the Service and Timer
 The commands below reload the **systemd daemon** so the new service and timer will reflect, enables the `devopsfetch.service` and `devopsfetch.timer` to start automatically on system boot.
 
 ```sh
@@ -148,7 +143,7 @@ systemctl enable devopsfetch.timer
 systemctl start devopsfetch.timer
 ```
 
-### 8. Configure Log Rotation
+### 7. Configure Log Rotation
 This create a file named `devopsfetch` in the `lograte` configuration directory. This file defines how the log file is rotate.
 
 The content of the file:
@@ -202,7 +197,7 @@ devopsfetch -p
 2. List Docker images and containers.
 
 ```sh
-devopsfetch -d
+devopsfetch -d 
 ```
 
 _**Note**: I created a container from the official **mariadb** image before running the command above._
