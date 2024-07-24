@@ -39,10 +39,10 @@ format_table() {
 display_ports() {
     if [ -z "$1" ]; then
         echo "Active Ports and Services:"
-        echo -e "Port\tUser\tService"
+        printf "%-15s %-20s %-20s\n" "Port" "User" "Service"
         sudo ss -tuln | awk 'NR>1 {print $5}' | awk -F: '{print $NF}' | sort -n | uniq | \
         while read port; do
-            sudo lsof -i :$port | awk 'NR==2 {printf "%s\t%s\t%s\n", "'$port'", $3, $1}'
+            sudo lsof -i :$port | awk 'NR==2 {printf "%-15s %-20s %-20s\n", "'$port'", $3, $1}'
         done | format_table
     else
         echo "Information for Port $1:"
@@ -68,15 +68,14 @@ display_docker() {
         docker ps -a --format "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}" | format_table
     else
         echo "Information for Container $1:"
-        docker inspect $1 | jq '.[0] | {
-            Name: .Name,
-            Image: .Config.Image,
-            State: .State.Status,
-            IP: .NetworkSettings.IPAddress,
-            Ports: .NetworkSettings.Ports,
-            User: .Config.User,
-            Services: .NetworkSettings.Ports | to_entries | map(.key + ": " + (.value[0].HostPort // "N/A")) | join(", ")
-        }'
+        container_name=$(docker inspect --format='{{.Name}}' $1 | sed 's/\/\///g')
+        image=$(docker inspect --format='{{.Config.Image}}' $1)
+        status=$(docker inspect --format='{{.State.Status}}' $1)
+        ip=$(docker inspect --format='{{.NetworkSettings.IPAddress}}' $1)
+        ports=$(docker inspect --format='{{range $p, $conf := .NetworkSettings.Ports}}{{$p}} -> {{if $conf}}{{range $h, $hp := $conf}}{{$hp.HostPort}}{{end}}{{else}}{{end}}{{end}}' $1)
+
+        printf "%-20s %-20s %-10s %-15s %-20s\n" "Container Name" "Image" "Status" "IP Address" "Ports"
+        printf "%-20s %-20s %-10s %-15s %-20s\n" "${container_name:1}" "$image" "$status" "$ip" "$ports" | format_table
     fi
 }
 
