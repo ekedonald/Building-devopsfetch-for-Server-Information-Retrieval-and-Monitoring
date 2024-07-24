@@ -121,6 +121,7 @@ User=root
 [Install]
 WantedBy=multi-user.target
 ```
+_/etc/systemd/system/devopsfetch.service_
 
 ### 5. Create Systemd Timer File
 This file defines the schedule for running the service. The timer runs 5 minutes after system boot and it runs every 5 minutes after it becomes active.
@@ -137,6 +138,7 @@ Persistent=true
 [Install]
 WantedBy=timers.target
 ```
+_/etc/systemd/system/devopsfetch.timer_
 
 ### 6. Enable and Start the Service and Timer
 The commands below reload the **systemd daemon** so the new service and timer will reflect, enables the `devopsfetch.service` and `devopsfetch.timer` to start automatically on system boot.
