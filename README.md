@@ -194,11 +194,15 @@ After running the commands above, run the commands below to test the functionali
 devopsfetch -p
 ```
 
+![ports](./images/1%20ports.png)
+
 2. List Docker images and containers.
 
 ```sh
 devopsfetch -d 
 ```
+
+![docker images and containers](./images/2%20image%20and%20container.png)
 
 _**Note**: I created a container from the official **mariadb** image before running the command above._
 
@@ -208,11 +212,15 @@ _**Note**: I created a container from the official **mariadb** image before runn
 devopsfetch -u
 ```
 
+![users](./images/3%20user.png)
+
 4. Display `ikennade.website` domain and the URL it proxies to.
 
 ```sh
 devopsfetch -n ikennade.website
 ```
+
+![domain_name](./images/4%20domain_name.png)
 
 _**Note**: I configured Nginx to act a Reverse Proxy for a Golang Web App._
 
@@ -221,3 +229,5 @@ _**Note**: I configured Nginx to act a Reverse Proxy for a Golang Web App._
 ```sh
 devopsfetch -t 2024-07-23
 ```
+
+![july 23](./images/5%20july23.png)
